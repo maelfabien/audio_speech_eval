@@ -1,0 +1,7 @@
+numpy==1.18.0
+streamlit==0.75.0
+pyloudnorm==0.1.0
+sounddevice==0.4.0
+pysepm==0.1
+scipy==1.4.1
+SoundFile==0.10.3.post1
