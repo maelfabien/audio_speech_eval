@@ -6,8 +6,11 @@ from scipy.io.wavfile import write
 import numpy as np
 from tempfile import NamedTemporaryFile
 import pysepm
+import speechmetrics
 
-def record(sr=16000, channels=1, duration=3):
+window_length = 3 
+
+def record(sr=16000, channels=1, duration=window_length):
 	recording = sd.rec(int(duration * sr), samplerate=sr, channels=channels).reshape(-1)
 	sd.wait()
 	write('temp.wav', sr, recording)
@@ -121,24 +124,24 @@ else:
 	if type_metric == "Objective measures":
 		intru = st.sidebar.selectbox("Select intrusiveness:", ["Intrusive", "Non-intrusive"])
 
+		if intru == "Intrusive":
 
-		buffer1 = st.file_uploader(label="Clean file", type=["ogg", "wav"])
-		temp_file1 = NamedTemporaryFile(delete=False)
-		
-		if buffer1:
-			temp_file1.write(buffer1.getvalue())
-
-			buffer2 = st.file_uploader(label="Processed file", type=["ogg", "wav"])
-			temp_file2 = NamedTemporaryFile(delete=False)
+			buffer1 = st.file_uploader(label="Clean file", type=["ogg", "wav"])
+			temp_file1 = NamedTemporaryFile(delete=False)
 			
-			if buffer2:
-				temp_file2.write(buffer2.getvalue())
+			if buffer1:
+				temp_file1.write(buffer1.getvalue())
+
+				buffer2 = st.file_uploader(label="Processed file", type=["ogg", "wav"])
+				temp_file2 = NamedTemporaryFile(delete=False)
+				
+				if buffer2:
+					temp_file2.write(buffer2.getvalue())
 
 
-				clean_speech, fs = sf.read(temp_file1.name)
-				noisy_speech, fs = sf.read(temp_file2.name)
+					clean_speech, fs = sf.read(temp_file1.name)
+					noisy_speech, fs = sf.read(temp_file2.name)
 
-				if intru == "Intrusive":
 
 					domain = st.sidebar.selectbox("Select domain:", ["Time domain", "Frequency domain", "Perceptual domain"])
 
@@ -192,5 +195,57 @@ else:
 
 							st.write(list(pysepm.pesq(clean_speech, noisy_speech, fs))[1])
 
+		elif intru == "Non-intrusive":
+
+			model = st.sidebar.selectbox("Select measure:", ["MOSNet", "SRMR"])
+
+			if model == "MOSNet":
+
+				metrics = speechmetrics.load('absolute', window_length)
+
+				st.sidebar.markdown("---")
+				st.sidebar.markdown("**Select data source:**")
+
+				if st.sidebar.button("Record sample"):
+
+					record()
+					scores = metrics("temp.wav")
+					st.write(scores["mosnet"][0])
+					st.audio("temp.wav")
 
 
+				buffer = st.sidebar.file_uploader(label="Upload an audio file", type=["ogg", "wav"])
+				temp_file = NamedTemporaryFile(delete=False)
+				
+				if buffer:
+					temp_file.write(buffer.getvalue())
+					scores = metrics(temp_file.name)
+					st.write(scores["mosnet"][0])
+
+					st.audio(temp_file.name)
+
+
+			if model == "SRMR":
+
+				metrics = speechmetrics.load('absolute', window_length)
+
+				st.sidebar.markdown("---")
+				st.sidebar.markdown("**Select data source:**")
+
+				if st.sidebar.button("Record sample"):
+
+					record()
+					scores = metrics("temp.wav")
+					st.write(scores["srmr"][0])
+					st.audio("temp.wav")
+
+
+				buffer = st.sidebar.file_uploader(label="Upload an audio file", type=["ogg", "wav"])
+				temp_file = NamedTemporaryFile(delete=False)
+				
+				if buffer:
+					temp_file.write(buffer.getvalue())
+					scores = metrics(temp_file.name)
+					st.write(scores["srmr"][0])
+
+					st.audio(temp_file.name)
